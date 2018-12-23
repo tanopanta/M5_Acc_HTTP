@@ -1,4 +1,4 @@
-# acc_thingsboard   
+# M5 Acc HTTP   
 加速度、ジャイロを20秒に一回HTTPで送信。   
 ## 利用方法   
 1. myconfig.h.tmpにパラメータを設定し、myconfig.hに変更する。    
