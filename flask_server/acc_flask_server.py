@@ -33,7 +33,7 @@ def acc_post():
     print(gyroX)
     
     state_list = ["stay", "walk", "up", "down", "other"]
-    state = random.choice(state_list)
+    state = random.randint(0,3)
     return Response(json.dumps({"state": state}))
 
 if __name__ == '__main__':
