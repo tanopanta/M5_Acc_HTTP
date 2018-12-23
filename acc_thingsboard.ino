@@ -66,7 +66,7 @@ void taskAcc(void * pvParameters) {
           root["gy"] = s.gyroX;
           root["gz"] = s.gyroX;
 
-          if (!client.connect(thingboardHost, 5000)) {
+          if (!client.connect(thingboardHost, httpPort)) {
             Serial.println("Connection failed");
             continue;
           }
