@@ -13,8 +13,7 @@ app = Flask(__name__)
 # index にアクセスしたときの処理
 @app.route('/')
 def index():
-    # index.html をレンダリングする
-    return render_template('index.html')
+    return Response("test")
 
 
 
