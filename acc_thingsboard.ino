@@ -1,4 +1,5 @@
 #include <M5Stack.h>
+#include <ThingsBoard.h>
 #include <Ticker.h>
 #include <WiFi.h>
 #include "utility/MPU9250.h"
@@ -19,7 +20,10 @@ struct sensorData {
 };
 
 void getAcc(MPU9250* IMU,sensorData* pSensorData);
-WiFiClient client;
+
+WiFiClient espClient;
+ThingsBoard tb(espClient);
+
 //位置情報を定期的に更新するタスク
 void taskAcc(void * pvParameters) {
     Ticker tickerSensor; // センサの値を読む
@@ -52,7 +56,7 @@ void taskAcc(void * pvParameters) {
               getAcc(&IMU, &s);
               count++;
             }
-            delay(1);
+            yield(); //　優先度同じの別タスクへ処理を渡す。なかったらそのまま続行。
           }
           tickerSensor.detach();
           // 送信
@@ -65,37 +69,12 @@ void taskAcc(void * pvParameters) {
           root["gx"] = s.gyroX;
           root["gy"] = s.gyroX;
           root["gz"] = s.gyroX;
+          Serial.println("send");
 
-          if (!client.connect(thingboardHost, httpPort)) {
-            Serial.println("Connection failed");
-            continue;
-          }
-          
-          String request = String("POST ") + String(thingboardURL);
-          request += " HTTP/1.1\r\n";
-          request += "Host: " + String(thingboardHost) + "\r\n";
-          request += "User-Agent: ESP32\r\n";
-          request += "Content-Type:application/json\r\n";
-          request += "Content-Length:" + String(root.measureLength()) + "\r\n";
-          request += "Connection: close\r\n\r\n";
-          client.print(request);
-          root.printTo(client);
-          
-          unsigned long timeout = millis();
-          while (client.available() == 0) {
-              if (millis() - timeout > 5000) {
-                  Serial.println(">>> Client Timeout !");
-                  client.stop();
-                  break;
-              }
-              delay(1);
-          }
-          String response = "";
-          while (client.available()) {
-            response += client.readString();
-            yield ();
-          }
-          Serial.println(response);
+          char value[4096];
+          root.printTo(value);
+          tb.sendTelemetryJson(value);
+          Serial.println(value);
         }
         delay(100);
     }
@@ -135,7 +114,9 @@ void setup() {
 
 void loop() {
     // メインの処理    
-    delay(1000);
+    delay(10);
+    keepTbConn();
+    tb.loop();
 }
 
 
@@ -167,6 +148,19 @@ void getAcc(MPU9250* IMU, sensorData* pSensorData) {
   pSensorData -> gyroY += String((int)(IMU->gy)) + ",";
   pSensorData -> gyroZ += String((int)(IMU->gz)) + ",";
 
+}
+// サーバーとのコネクション維持
+bool keepTbConn() {
+    if (!tb.connected()) {
+        // Connect to the ThingsBoard
+        Serial.print("Connecting...");
+        if (!tb.connect(thingboardHost, key)) {
+            Serial.println("Failed to connect");
+            return false;
+        }
+        Serial.print("Connecting done");
+    }
+    return true;
 }
 
 //ハンドラ－１（センサーを読んでバッファリング）

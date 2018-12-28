@@ -1,0 +1,184 @@
+{
+  "ruleChain": {
+    "additionalInfo": {
+      "description": "POSTされてきたものを内容で処理を振り分け"
+    },
+    "name": "Post Rule",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null
+  },
+  "metadata": {
+    "firstNodeIndex": 1,
+    "nodes": [
+      {
+        "additionalInfo": {
+          "layoutX": 1115,
+          "layoutY": 271
+        },
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
+        "name": "Save Timeseries",
+        "debugMode": false,
+        "configuration": {
+          "defaultTTL": 0
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 181,
+          "layoutY": 236
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsSwitchNode",
+        "name": "Telemetry Switch",
+        "debugMode": false,
+        "configuration": {
+          "jsScript": "if(typeof msg.type !== 'undefined' && msg.type === 'wifi') {\n    return [\"WIFI_POST_TELEMETRY\"];\n} else if(typeof msg.type !== 'undefined' && msg.type === 'acc') {\n    return [\"ACC_POST_TELEMETRY\"];\n} else {\n    return [\"NORMAL_POST_TELEMETRY\"];\n}\n"
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 362,
+          "layoutY": 413
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "Change Geo",
+        "debugMode": false,
+        "configuration": {
+          "jsScript": "var aps = [];\r\n\r\n// MACアドレスにコロンを入れる\r\nfor(var key in msg) {\r\n    if(key === \"type\") {\r\n        continue;\r\n    }\r\n    var mac = \"\";\r\n    for(var i = 0; i < 6; i++) {\r\n       mac += key.slice(i*2, i*2 + 2);\r\n       if(i != 5) {\r\n            mac += \":\";\r\n       }\r\n    }\r\n    aps.push({\"macAddress\": mac, \"signalStrength\": msg[key]});\r\n}\r\n\r\nreturn {msg: {\"wifiAccessPoints\":aps}, metadata: metadata, msgType: msgType};\r\n"
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 651,
+          "layoutY": 368
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "Post Geo",
+        "debugMode": true,
+        "configuration": {
+          "restEndpointUrlPattern": "https://location.services.mozilla.com/v1/geolocate?key=test",
+          "requestMethod": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 907,
+          "layoutY": 541
+        },
+        "type": "org.thingsboard.rule.engine.action.TbLogNode",
+        "name": "Log API Failure",
+        "debugMode": false,
+        "configuration": {
+          "jsScript": "return 'Incoming message:\\n' + JSON.stringify(msg) + '\\nIncoming metadata:\\n' + JSON.stringify(metadata);"
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 1198,
+          "layoutY": 394
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "Change Json Object",
+        "debugMode": false,
+        "configuration": {
+          "jsScript": "var newmsg = {};\nnewmsg[\"lat\"] = msg[\"location\"][\"lat\"];\nnewmsg[\"lng\"] = msg[\"location\"][\"lng\"];\nreturn {msg: newmsg, metadata: metadata, msgType: msgType};"
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 676,
+          "layoutY": 301
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "Post Acc",
+        "debugMode": true,
+        "configuration": {
+          "restEndpointUrlPattern": "http://127.0.0.1:65432/acc_post",
+          "requestMethod": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 934,
+          "layoutY": 405
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "GeoIP Remove",
+        "debugMode": false,
+        "configuration": {
+          "jsScript": "return msg.fallback !== \"ipf\";"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 1,
+        "toIndex": 6,
+        "type": "ACC_POST_TELEMETRY"
+      },
+      {
+        "fromIndex": 1,
+        "toIndex": 0,
+        "type": "NORMAL_POST_TELEMETRY"
+      },
+      {
+        "fromIndex": 1,
+        "toIndex": 2,
+        "type": "WIFI_POST_TELEMETRY"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 4,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 3,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 3,
+        "toIndex": 4,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 3,
+        "toIndex": 7,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 5,
+        "toIndex": 0,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 4,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 0,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 4,
+        "type": "False"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 5,
+        "type": "True"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}

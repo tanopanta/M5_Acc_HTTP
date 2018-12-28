@@ -1,13 +1,7 @@
-// パターン１ thingsboard経由で送る場合
+// thinsboad settings
 const char* thingboardHost = "*.*.*.*";
-const char* thingboardURL = "/api/v1/{key}/telemetry";
-const int httpPort = 8080
+const char* key  = "***";
 
-// パターン2 自分のサーバに直で送る場合
-// const char* thingboardHost = "192.168.1.3";
-// const char* thingboardURL = "/acc_post";
-// const int httpPort = 5000;
-
-
+// Wi-Fi
 const char* ssid = "";
 const char* password = "";
