@@ -46,7 +46,17 @@ void taskAcc(void * pvParameters) {
         if(startFlg) {
           startFlg = false;
           tickerSensor.attach_ms(16, _readSensor);
+          
+          // Stringをバッファとして利用。
+          // Stringは配列の動的な再確保を繰り返すので、reserveで初期サイズを指定しておく。 
           sensorData s = {"","","","","",""};
+          s.accX.reserve(256);
+          s.accY.reserve(256);
+          s.accZ.reserve(256);
+          s.gyroX.reserve(256);
+          s.gyroY.reserve(256);
+          s.gyroZ.reserve(256);
+
           // 2秒分取り終わったら抜ける
           int count = 0;
           while(count < 62.5 * 2) {
@@ -59,7 +69,9 @@ void taskAcc(void * pvParameters) {
             yield(); //　優先度同じの別タスクへ処理を渡す。なかったらそのまま続行。
           }
           tickerSensor.detach();
-          // 送信
+          
+          // JSONを作る。＊ThingsBoardは今のところネスト禁止
+          // {"type":"acc", "x":"1,2,3,2,...", "y"...}
           DynamicJsonBuffer jsonBuffer(JSON_OBJECT_SIZE(7));
           JsonObject &root = jsonBuffer.createObject();
           root["type"] = "acc";
