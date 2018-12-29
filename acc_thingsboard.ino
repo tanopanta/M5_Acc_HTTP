@@ -24,7 +24,7 @@ void getAcc(MPU9250* IMU,sensorData* pSensorData);
 WiFiClient espClient;
 ThingsBoard tb(espClient);
 
-//位置情報を定期的に更新するタスク
+//加速度を定期的に送信するタスク
 void taskAcc(void * pvParameters) {
     Ticker tickerSensor; // センサの値を読む
     Ticker tickerStartRead; // 計測開始
@@ -94,7 +94,7 @@ void taskAcc(void * pvParameters) {
 
 
 void setup() {
-    M5.begin();;
+    M5.begin();
     dacWrite(25, 0); // Speaker OFF(スピーカーノイズ対策)
     
     WiFi.begin(ssid, password); // Wi-Fi APに接続
