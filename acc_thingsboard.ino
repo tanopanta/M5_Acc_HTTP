@@ -1,9 +1,9 @@
+#include <ArduinoJson.h>
 #include <M5Stack.h>
 #include <ThingsBoard.h>
 #include <Ticker.h>
 #include <WiFi.h>
 #include "utility/MPU9250.h"
-#include <ArduinoJson.h>
 
 #include "myconfig.h"
 
@@ -36,57 +36,57 @@ void taskAcc(void * pvParameters) {
     delay(10);
     IMU.initMPU9250();
 
-    
-    // 20秒ごとに計測を開始
+    // 20秒ごとに計測開始フラグを立てる
     tickerStartRead.attach_ms(20000, _upStartFlg);
+
     delay(1000);
+    
     startFlg = true;
     for(;;) {
-        // 16ミリ秒ごと(62.5Hz)にセンサーリード
         if(startFlg) {
-          startFlg = false;
-          tickerSensor.attach_ms(16, _readSensor);
-          
-          // Stringをバッファとして利用。
-          // Stringは配列の動的な再確保を繰り返すので、reserveで初期サイズを指定しておく。 
-          sensorData s = {"","","","","",""};
-          s.accX.reserve(256);
-          s.accY.reserve(256);
-          s.accZ.reserve(256);
-          s.gyroX.reserve(256);
-          s.gyroY.reserve(256);
-          s.gyroZ.reserve(256);
+            startFlg = false;
+            
+            // Stringをバッファとして利用。
+            // Stringは配列の動的な再確保を繰り返すので、reserveで初期サイズを指定しておく。 
+            sensorData s = {"","","","","",""};
+            s.accX.reserve(256);
+            s.accY.reserve(256);
+            s.accZ.reserve(256);
+            s.gyroX.reserve(256);
+            s.gyroY.reserve(256);
+            s.gyroZ.reserve(256);
 
-          // 2秒分取り終わったら抜ける
-          int count = 0;
-          while(count < 62.5 * 2) {
-            if(readSensorFlg) {
-              readSensorFlg = false;
-              
-              getAcc(&IMU, &s);
-              count++;
+            tickerSensor.attach_ms(16, _readSensor);
+            // 2秒分取り終わったら抜ける
+            int count = 0;
+            while(count < 62.5 * 2) {
+                if(readSensorFlg) {
+                    readSensorFlg = false;
+                    
+                    getAcc(&IMU, &s);
+                    count++;
+                }
+                yield(); //　優先度同じの別タスクへ処理を渡す。なかったらそのまま続行。
             }
-            yield(); //　優先度同じの別タスクへ処理を渡す。なかったらそのまま続行。
-          }
-          tickerSensor.detach();
-          
-          // JSONを作る。＊ThingsBoardは今のところネスト禁止
-          // {"type":"acc", "x":"1,2,3,2,...", "y"...}
-          DynamicJsonBuffer jsonBuffer(JSON_OBJECT_SIZE(7));
-          JsonObject &root = jsonBuffer.createObject();
-          root["type"] = "acc";
-          root["x"] = s.accX;
-          root["y"] = s.accY;
-          root["z"] = s.accZ;
-          root["gx"] = s.gyroX;
-          root["gy"] = s.gyroX;
-          root["gz"] = s.gyroX;
-          Serial.println("send");
+            tickerSensor.detach();
+            
+            // JSONを作る。＊ThingsBoardは今のところネスト禁止
+            // {"type":"acc", "x":"1,2,3,2,...", "y"...}
+            DynamicJsonBuffer jsonBuffer(JSON_OBJECT_SIZE(7));
+            JsonObject &root = jsonBuffer.createObject();
+            root["type"] = "acc";
+            root["x"] = s.accX;
+            root["y"] = s.accY;
+            root["z"] = s.accZ;
+            root["gx"] = s.gyroX;
+            root["gy"] = s.gyroX;
+            root["gz"] = s.gyroX;
+            Serial.println("send");
 
-          char value[4096];
-          root.printTo(value);
-          tb.sendTelemetryJson(value);
-          Serial.println(value);
+            char value[4096];
+            root.printTo(value);
+            tb.sendTelemetryJson(value);
+            Serial.println(value);
         }
         delay(100);
     }
@@ -114,13 +114,13 @@ void setup() {
     
         // 加速度用タスクのセット
     xTaskCreatePinnedToCore(
-                    taskAcc,     /* Function to implement the task */
-                    "taskAcc",   /* Name of the task */
-                    8192,      /* Stack size in words */
-                    NULL,      /* Task input parameter */
-                    1,         /* Priority of the task */
-                    NULL,      /* Task handle. */
-                    0);        /* Core where the task should run */
+        taskAcc,     /* Function to implement the task */
+        "taskAcc",   /* Name of the task */
+        8192,      /* Stack size in words */
+        NULL,      /* Task input parameter */
+        1,         /* Priority of the task */
+        NULL,      /* Task handle. */
+        0);        /* Core where the task should run */
 }
 
 
@@ -133,32 +133,32 @@ void loop() {
 
 
 void getAcc(MPU9250* IMU, sensorData* pSensorData) {
-  // センサから各種情報を読み取り
-  IMU->readAccelData(IMU->accelCount);
-  IMU->getAres();
-  IMU->readGyroData(IMU->gyroCount);
-  IMU->getGres();
+    // センサから各種情報を読み取り
+    IMU->readAccelData(IMU->accelCount);
+    IMU->getAres();
+    IMU->readGyroData(IMU->gyroCount);
+    IMU->getGres();
 
-  // 取得した加速度に解像度をかけて、バイアス値を引く
-  IMU->ay = (float)IMU->accelCount[1]*IMU->aRes - IMU->accelBias[1];
-  IMU->az = (float)IMU->accelCount[2]*IMU->aRes - IMU->accelBias[2];
-  IMU->ax = (float)IMU->accelCount[0]*IMU->aRes - IMU->accelBias[0];
+    // 取得した加速度に解像度をかけて、バイアス値を引く
+    IMU->ay = (float)IMU->accelCount[1]*IMU->aRes - IMU->accelBias[1];
+    IMU->az = (float)IMU->accelCount[2]*IMU->aRes - IMU->accelBias[2];
+    IMU->ax = (float)IMU->accelCount[0]*IMU->aRes - IMU->accelBias[0];
 
-  // 取得したジャイロに解像度をかける
-  IMU->gx = (float)IMU->gyroCount[0]*IMU->gRes;
-  IMU->gy = (float)IMU->gyroCount[1]*IMU->gRes;
-  IMU->gz = (float)IMU->gyroCount[2]*IMU->gRes;
+    // 取得したジャイロに解像度をかける
+    IMU->gx = (float)IMU->gyroCount[0]*IMU->gRes;
+    IMU->gy = (float)IMU->gyroCount[1]*IMU->gRes;
+    IMU->gz = (float)IMU->gyroCount[2]*IMU->gRes;
 
-  // 四元数を更新する際に必ず呼び出し
-  IMU->updateTime();
+    // 四元数を更新する際に必ず呼び出し
+    IMU->updateTime();
 
-  // 加速度・ジャイロを与えられた構造体に代入
-  pSensorData -> accX += String((int)(1000*IMU->ax)) + ",";
-  pSensorData -> accY += String((int)(1000*IMU->ay)) + ",";
-  pSensorData -> accZ += String((int)(1000*IMU->az)) + ",";
-  pSensorData -> gyroX += String((int)(IMU->gx)) + ",";
-  pSensorData -> gyroY += String((int)(IMU->gy)) + ",";
-  pSensorData -> gyroZ += String((int)(IMU->gz)) + ",";
+    // 加速度・ジャイロを与えられた構造体に代入
+    pSensorData -> accX += String((int)(1000*IMU->ax)) + ",";
+    pSensorData -> accY += String((int)(1000*IMU->ay)) + ",";
+    pSensorData -> accZ += String((int)(1000*IMU->az)) + ",";
+    pSensorData -> gyroX += String((int)(IMU->gx)) + ",";
+    pSensorData -> gyroY += String((int)(IMU->gy)) + ",";
+    pSensorData -> gyroZ += String((int)(IMU->gz)) + ",";
 
 }
 // サーバーとのコネクション維持
